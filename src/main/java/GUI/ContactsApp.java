@@ -6,6 +6,7 @@ import org.example.Main;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.event.ActionEvent;
+import java.awt.event.ItemEvent;
 
 public class ContactsApp extends JFrame {
     private JPanel root;
@@ -19,6 +20,8 @@ public class ContactsApp extends JFrame {
     private JLabel contactManager;
     private JPanel tools;
     private JPanel contacts;
+    private JComboBox<String> Sortby; // Use generics for type safety
+
 
     public ContactsApp() {
         setTitle("Contact Manager");
@@ -27,16 +30,35 @@ public class ContactsApp extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        // Load table data
         refreshTable();
 
-        // Action for New Button → Open ContactForm
-        newButton.addActionListener((ActionEvent e) -> {
-            ContactForm form = new ContactForm(this); // pass reference for refresh
-            form.setVisible(true);
+        // --- SORTING ---
+        // CHANGED: Simplified options
+        Sortby.setModel(new DefaultComboBoxModel<>(new String[]{"Default", "Name", "Group"}));
+        Sortby.addItemListener(e -> {
+            if (e.getStateChange() == ItemEvent.SELECTED) {
+                String selection = (String) e.getItem();
+                // CHANGED: Correctly calls the right sort method
+                switch (selection) {
+                    case "Name":
+                        table1.setModel(Main.sortByName());
+                        break;
+                    case "Group":
+                        table1.setModel(Main.sortByGroup());
+                        break;
+                    default:
+                        refreshTable();
+                        break;
+                }
+            }
         });
 
-        // Action for Edit Button → Open ContactForm prefilled
+        // --- BUTTONS ---
+        newButton.addActionListener(e -> {
+            // Opens form in "Add Mode"
+            new ContactForm(this).setVisible(true);
+        });
+
         editButton.addActionListener(e -> {
             int selectedRow = table1.getSelectedRow();
             if (selectedRow == -1) {
@@ -44,80 +66,72 @@ public class ContactsApp extends JFrame {
                 return;
             }
 
-            int contactId = (int) table1.getValueAt(selectedRow, 0);
-            String name = (String) table1.getValueAt(selectedRow, 1);
-            String phone = (String) table1.getValueAt(selectedRow, 2);
-            String email = (String) table1.getValueAt(selectedRow, 3);
-            String group = (String) table1.getValueAt(selectedRow, 4);
-            String note = (String) table1.getValueAt(selectedRow, 5);
+            int modelRow = table1.convertRowIndexToModel(selectedRow);
+            DefaultTableModel model = (DefaultTableModel) table1.getModel();
 
-            ContactForm form = new ContactForm(this); // pass reference for refresh
-            form.setVisible(true);
+            int id = (int) model.getValueAt(modelRow, 0);
+            String name = (String) model.getValueAt(modelRow, 1);
+            String phone = (String) model.getValueAt(modelRow, 2);
+            String email = (String) model.getValueAt(modelRow, 3);
+            String group = (String) model.getValueAt(modelRow, 4);
+            String note = (String) model.getValueAt(modelRow, 5);
 
-            // Prefill form
-            form.nameField.setText(name);
-            form.phoneField.setText(phone);
-            form.emailField.setText(email);
-            form.comboBox1.setSelectedItem(group);
-            form.textArea1.setText(note);
+            Contacts contactToEdit = new Contacts(id, name, phone, email, group, note);
 
-            // Save button for update
-            form.saveButton.addActionListener(ev -> {
-                Contacts contact = new Contacts(contactId, form.nameField.getText(), form.phoneField.getText(),
-                        form.emailField.getText(), (String) form.comboBox1.getSelectedItem(),
-                        form.textArea1.getText());
-                Main.editContacts(contact);
-                JOptionPane.showMessageDialog(form, "Contact updated successfully.", "Updated", JOptionPane.INFORMATION_MESSAGE);
-                form.dispose();
-                refreshTable();
-            });
+            // CHANGED: Opens form in "Edit Mode" by passing the contact object
+            new ContactForm(this, contactToEdit).setVisible(true);
         });
 
-        // Action for Delete Button
         deleteButton.addActionListener(e -> {
             int selectedRow = table1.getSelectedRow();
             if (selectedRow == -1) {
                 JOptionPane.showMessageDialog(root, "Please select a contact to delete.", "No Selection", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-
-            int confirm = JOptionPane.showConfirmDialog(root, "Are you sure you want to delete this contact?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+            int confirm = JOptionPane.showConfirmDialog(root, "Delete this contact?", "Confirm", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
-                int contactId = (int) table1.getValueAt(selectedRow, 0);
-                Contacts contact = new Contacts(contactId, null, null, null, null, null);
-                Main.deleteContacts(contact);
-                JOptionPane.showMessageDialog(root, "Contact deleted successfully.", "Deleted", JOptionPane.INFORMATION_MESSAGE);
+                int modelRow = table1.convertRowIndexToModel(selectedRow);
+                int id = (int) table1.getModel().getValueAt(modelRow, 0);
+                // A temporary contact object with only the ID is needed for deletion
+                Contacts contactToDelete = new Contacts(id, null, null, null, null, null);
+                Main.deleteContacts(contactToDelete);
                 refreshTable();
+                Sortby.setSelectedIndex(0);
             }
         });
 
-        // Action for Search Button → Optional
+        // Search logic remains the same
         searchButton.addActionListener((ActionEvent e) -> {
+            // ... your existing search code ...
             String query = searchBar.getText().trim().toLowerCase();
             DefaultTableModel model = Main.loadContacts();
-            for (int i = model.getRowCount() - 1; i >= 0; i--) {
+            DefaultTableModel searchResultModel = new DefaultTableModel();
+            for (int i = 0; i < model.getColumnCount(); i++) {
+                searchResultModel.addColumn(model.getColumnName(i));
+            }
+            for (int i = 0; i < model.getRowCount(); i++) {
                 boolean match = false;
-                for (int j = 1; j <= 4; j++) { // check name, phone, email, group
-                    if (model.getValueAt(i, j).toString().toLowerCase().contains(query)) {
+                for (int j = 1; j <= 4; j++) {
+                    Object cellValue = model.getValueAt(i, j);
+                    if (cellValue != null && cellValue.toString().toLowerCase().contains(query)) {
                         match = true;
                         break;
                     }
                 }
-                if (!match) model.removeRow(i);
+                if (match) {
+                    searchResultModel.addRow((java.util.Vector) model.getDataVector().elementAt(i));
+                }
             }
-            table1.setModel(model);
+            table1.setModel(searchResultModel);
+            Sortby.setSelectedIndex(0);
         });
     }
 
-    // Refresh table method
     public void refreshTable() {
         table1.setModel(Main.loadContacts());
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            ContactsApp app = new ContactsApp();
-            app.setVisible(true);
-        });
+        SwingUtilities.invokeLater(() -> new ContactsApp().setVisible(true));
     }
 }
