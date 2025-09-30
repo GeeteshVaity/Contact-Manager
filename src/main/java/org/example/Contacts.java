@@ -27,4 +27,9 @@ public class Contacts {
         this.groupName = groupName;
         this.note = note;
     }
+
+    public Contacts(int group_id, String groupName) {
+        this.group_id = group_id;
+        this.groupName = groupName;
+    }
 }

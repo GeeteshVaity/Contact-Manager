@@ -9,7 +9,8 @@ import java.util.Map;
 
 public class ContactForm extends JFrame {
     private JPanel root;
-    private JPanel title;
+    private JPanel titlePanel;
+    private JLabel titleLabel;
     private JPanel content;
     JTextField nameField;
     JTextField phoneField;

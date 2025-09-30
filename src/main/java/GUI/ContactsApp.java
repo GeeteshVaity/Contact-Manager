@@ -5,6 +5,7 @@ import org.example.Main;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumn;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemEvent;
 
@@ -69,6 +70,7 @@ public class ContactsApp extends JFrame {
             int modelRow = table1.convertRowIndexToModel(selectedRow);
             DefaultTableModel model = (DefaultTableModel) table1.getModel();
 
+
             int id = (int) model.getValueAt(modelRow, 0);
             String name = (String) model.getValueAt(modelRow, 1);
             String phone = (String) model.getValueAt(modelRow, 2);
@@ -102,33 +104,56 @@ public class ContactsApp extends JFrame {
 
         // Search logic remains the same
         searchButton.addActionListener((ActionEvent e) -> {
-            // ... your existing search code ...
             String query = searchBar.getText().trim().toLowerCase();
-            DefaultTableModel model = Main.loadContacts();
+
+            // This is your original model with all contacts
+            DefaultTableModel originalModel = Main.loadContacts();
+
+            // This new model will only store the search results
             DefaultTableModel searchResultModel = new DefaultTableModel();
-            for (int i = 0; i < model.getColumnCount(); i++) {
-                searchResultModel.addColumn(model.getColumnName(i));
+
+            // 1. Copy column headers from the original model to the search result model
+            for (int i = 0; i < originalModel.getColumnCount(); i++) {
+                searchResultModel.addColumn(originalModel.getColumnName(i));
             }
-            for (int i = 0; i < model.getRowCount(); i++) {
+
+            // 2. Iterate through each row of the original data
+            for (int i = 0; i < originalModel.getRowCount(); i++) {
                 boolean match = false;
+                // Iterate through searchable columns (Name, Phone, Email, Group)
                 for (int j = 1; j <= 4; j++) {
-                    Object cellValue = model.getValueAt(i, j);
+                    Object cellValue = originalModel.getValueAt(i, j);
+                    // Check if the cell content contains the search query
                     if (cellValue != null && cellValue.toString().toLowerCase().contains(query)) {
                         match = true;
-                        break;
+                        break; // Found a match in this row, no need to check other columns
                     }
                 }
+                // 3. If a match was found, add the entire row to the search result model
                 if (match) {
-                    searchResultModel.addRow((java.util.Vector) model.getDataVector().elementAt(i));
+                    // Get the row data as a Vector and add it
+                    searchResultModel.addRow((java.util.Vector) originalModel.getDataVector().elementAt(i));
                 }
             }
+            // 4. Update the JTable to display the search results
             table1.setModel(searchResultModel);
+            // 5. IMPORTANT: Hide the ID column on the new search result model
+            hideIdColumn();
+            // 6. Reset the sort dropdown to "Default"
             Sortby.setSelectedIndex(0);
-        });
+        }); // <-- This closing was also needed);
+    }
+
+    private void hideIdColumn() {
+        if (table1.getColumnModel().getColumnCount() > 0) {
+            TableColumn idColumn = table1.getColumnModel().getColumn(0);
+            table1.removeColumn(idColumn);
+        }
     }
 
     public void refreshTable() {
         table1.setModel(Main.loadContacts());
+        hideIdColumn();
     }
 
     public static void main(String[] args) {
