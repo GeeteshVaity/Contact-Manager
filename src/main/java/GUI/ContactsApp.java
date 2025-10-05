@@ -43,9 +43,11 @@ public class ContactsApp extends JFrame {
                 switch (selection) {
                     case "Name":
                         table1.setModel(Main.sortByName());
+                        hideIdColumn();
                         break;
                     case "Group":
                         table1.setModel(Main.sortByGroup());
+                        hideIdColumn();
                         break;
                     default:
                         refreshTable();
