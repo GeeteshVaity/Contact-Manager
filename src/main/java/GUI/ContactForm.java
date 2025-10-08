@@ -97,10 +97,21 @@ public class ContactForm extends JFrame {
     private void saveContact() {
         String name = nameField.getText().trim();
         String phone = phoneField.getText().trim();
+        String  email = emailField.getText().trim();
         if (name.isEmpty() || phone.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Name and Phone are required.", "Input Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
+        else if (phone.length() != 10) {
+            JOptionPane.showMessageDialog(rootPane, "Phone number should be 10 digits", "Error", JOptionPane.ERROR_MESSAGE);
+        return;
+        }
+        else if ( !email.contains("@") || (!email.contains(".com") && !email.contains(".in")) )
+        {
+            JOptionPane.showMessageDialog(rootPane, "Enter Valid Email", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
 
         String selectedGroupName = (String) comboBox1.getSelectedItem();
         int group_id = groupMap.getOrDefault(selectedGroupName, -1); // Get the ID for the selected group name

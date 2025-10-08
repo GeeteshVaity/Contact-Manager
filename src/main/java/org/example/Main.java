@@ -19,7 +19,7 @@ public class Main {
     //Main Function
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            GUI.ContactsApp app = new GUI.ContactsApp();
+            GUI.SplashScreen app = new GUI.SplashScreen();
             app.setVisible(true);
         });
     }
